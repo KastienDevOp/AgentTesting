@@ -1,0 +1,1 @@
+from chalice_forged import create_client\n\n# Create client with any provider\nclient = create_client("ollama", api_base="http://localhost:11434", model="qwen3", api_key="your-key")\nresponse = client.chat([{"role": "user", "content": "Hello!"}])\n\nfor chunk in client.stream_chat([{"role": "user", "content": "Hello!"}]):\n    print(chunk["content"], end="", flush=True)\nprint()
