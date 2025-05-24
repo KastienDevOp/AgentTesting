@@ -1,1 +1,136 @@
-# Chalice Forged - Provider Agnostic LLM Client\n\nA unified, plug-and-play interface for working with multiple Large Language Model (LLM) providers. Switch between providers seamlessly without changing your code.\n\n## Supported Providers\n\n- **OpenAI** (GPT-3.5, GPT-4, etc.)\n- **Anthropic** (Claude models)\n- **Google** (Gemini models)  \n- **Mistral AI** (Mistral models)\n- **Cohere** (Command models)\n- **HuggingFace** (Inference API)\n- **Ollama** (Local models)\n\n## Features\n\n- 🔌 **Plug-and-Play**: Switch providers with one line of code\n- 🔄 **Unified Interface**: Same API across all providers\n- ⚡ **Streaming Support**: Real-time response streaming\n- 🔧 **Flexible Configuration**: Environment variables, JSON files, or programmatic setup\n- 🏠 **Local & Cloud**: Support for both local (Ollama) and cloud providers\n- 🛡️ **Error Handling**: Consistent error handling across providers\n- 📝 **Type Hints**: Full typing support for better development experience\n\n## Quick Start\n\n### Installation\n\n```bash\ngit clone <repository-url>\ncd AgentTesting\npip install -r requirements.txt\n```\n\n### Basic Usage\n\n```python\nfrom chalice_forged import create_client\n\n# Create client with any provider\nclient = create_client(\"openai\", api_key=\"your-api-key\")\n\n# Chat completion\nresponse = client.chat([\n    {\"role\": \"user\", \"content\": \"Hello! How are you?\"}\n])\nprint(response[\"content\"])\n\n# Switch providers seamlessly\nclient.switch_provider(\"anthropic\", api_key=\"your-anthropic-key\")\nresponse = client.chat([\n    {\"role\": \"user\", \"content\": \"Same interface, different provider!\"}\n])\n```\n\n### Streaming Example\n\n```python\nfrom chalice_forged import create_client\n\nclient = create_client(\"openai\", api_key=\"your-api-key\")\n\nmessages = [{\"role\": \"user\", \"content\": \"Tell me a story\"}]\n\n# Stream the response\nfor chunk in client.stream_chat(messages):\n    if chunk.get(\"success\") and chunk.get(\"content\"):\n        print(chunk[\"content\"], end=\"\", flush=True)\n```\n\n## Configuration\n\n### Using .env File (Recommended)\n\nThe easiest way to configure Chalice Forged is with a `.env` file:\n\n```bash\n# 1. Copy the example file\ncp .env.example .env\n\n# 2. Edit .env with your actual API keys\nOPENAI_API_KEY=sk-your-actual-openai-key\nANTHROPIC_API_KEY=your-actual-anthropic-key\nGOOGLE_API_KEY=your-actual-google-key\nMISTRAL_API_KEY=your-actual-mistral-key\nCOHERE_API_KEY=your-actual-cohere-key\nHUGGINGFACE_API_KEY=your-actual-hf-key\n\n# Ollama (local) - no API key needed\nOLLAMA_BASE_URL=http://localhost:11434\nOLLAMA_MODEL=qwen3:latest\n```\n\n### Environment Variables\n\nAlternatively, set environment variables directly:\n\n```bash\nexport OPENAI_API_KEY=\"your-openai-key\"\nexport ANTHROPIC_API_KEY=\"your-anthropic-key\"\n# ... etc\n```\n\n### Programmatic Configuration\n\n```python\nfrom chalice_forged import LLMClient, ConfigManager\n\n# Using config manager (loads from .env automatically)\nconfig_manager = ConfigManager()\nconfig = config_manager.get_provider_config(\"openai\")\nclient = LLMClient(\"openai\", config)\n\n# Using custom .env file\nconfig_manager = ConfigManager(\".env.production\")\n\n# Direct configuration (overrides .env)\nclient = LLMClient(\"openai\", {\n    \"api_key\": \"your-key\",\n    \"model\": \"gpt-4\",\n    \"timeout\": 60\n})\n```\n\n## Provider-Specific Examples\n\n### OpenAI\n\n```python\nclient = create_client(\"openai\", \n    api_key=\"your-key\",\n    model=\"gpt-4\"\n)\n\nresponse = client.chat([\n    {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},\n    {\"role\": \"user\", \"content\": \"Explain quantum computing\"}\n])\n```\n\n### Anthropic (Claude)\n\n```python\nclient = create_client(\"anthropic\",\n    api_key=\"your-key\", \n    model=\"claude-3-sonnet-20240229\"\n)\n\nresponse = client.chat([\n    {\"role\": \"user\", \"content\": \"Write a python function to sort a list\"}\n])\n```\n\n### Local Ollama\n\n```python\n# Make sure Ollama is running: ollama run llama2\nclient = create_client(\"ollama\",\n    base_url=\"http://localhost:11434\",\n    model=\"llama2\"\n)\n\nresponse = client.chat([\n    {\"role\": \"user\", \"content\": \"What is machine learning?\"}\n])\n```\n\n## API Reference\n\n### LLMClient Methods\n\n- **`chat(messages, **kwargs)`** - Generate chat completion\n- **`stream_chat(messages, **kwargs)`** - Generate streaming chat completion  \n- **`complete(prompt, **kwargs)`** - Generate text completion\n- **`get_models()`** - Get available models for provider\n- **`switch_provider(name, config)`** - Switch to different provider\n\n### Common Parameters\n\n- **`temperature`** (float): Sampling temperature (0.0 to 1.0)\n- **`max_tokens`** (int): Maximum tokens to generate\n- **`top_p`** (float): Nucleus sampling parameter\n- **`model`** (str): Override default model\n\n### Response Format\n\nAll methods return a standardized response:\n\n```python\n{\n    \"success\": True,\n    \"content\": \"Generated text response\",\n    \"usage\": {\n        \"prompt_tokens\": 10,\n        \"completion_tokens\": 50,\n        \"total_tokens\": 60\n    },\n    \"model\": \"gpt-3.5-turbo\",\n    \"provider\": \"OpenAI\"\n}\n```\n\n## Adding Custom Providers\n\nExtend the system by implementing the `BaseProvider` interface:\n\n```python\nfrom chalice_forged.interfaces.base_provider import BaseProvider\nfrom chalice_forged.core.provider_factory import ProviderFactory\n\nclass CustomProvider(BaseProvider):\n    def chat_completion(self, messages, **kwargs):\n        # Implement your provider logic\n        pass\n    \n    def stream_completion(self, messages, **kwargs):\n        # Implement streaming logic\n        pass\n    \n    # ... implement other required methods\n\n# Register your provider\nProviderFactory.register_provider(\"custom\", CustomProvider)\n\n# Use it\nclient = create_client(\"custom\", api_key=\"your-key\")\n```\n\n## Error Handling\n\nThe library provides consistent error handling across all providers:\n\n```python\nfrom chalice_forged import create_client\n\ntry:\n    client = create_client(\"openai\", api_key=\"invalid-key\")\n    response = client.chat([{\"role\": \"user\", \"content\": \"Hello\"}])\n    \n    if not response.get(\"success\"):\n        print(f\"Error: {response.get('error')}\")\n        print(f\"Provider: {response.get('provider')}\")\n        \nexcept ValueError as e:\n    print(f\"Configuration error: {e}\")\nexcept Exception as e:\n    print(f\"Unexpected error: {e}\")\n```\n\n## Testing\n\nRun the demo to test your setup:\n\n```bash\npython main.py\n```\n\nThis will test the available providers and show example usage.\n\n## Contributing\n\n1. Fork the repository\n2. Create your feature branch (`git checkout -b feature/new-provider`)\n3. Add your provider following the `BaseProvider` interface\n4. Add tests and documentation\n5. Submit a pull request\n\n## License\n\nThis project is licensed under the MIT License.\n\n## Roadmap\n\n- [ ] Support for more providers (Azure OpenAI, AWS Bedrock, etc.)\n- [ ] Async/await support\n- [ ] Built-in retry logic with exponential backoff\n- [ ] Response caching\n- [ ] Token usage tracking and billing estimates\n- [ ] Model performance benchmarking\n\n---\n\n**Made with ❤️ for the AI community**
+# Chalice Forged
+
+## Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+- [Basic Usage](#basic-usage)
+- [Advanced Features](#advanced-features)
+- [Available Providers](#available-providers)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Overview
+
+Chalice Forged is a provider-agnostic client designed to simplify interactions with various large language model (LLM) providers. It allows you to switch between different providers like OpenAI, Anthropic, Google, and local models like Ollama without modifying your code. This library abstracts away the provider-specific API calls, offering a consistent interface for chat completions, text completions, and streaming responses.
+
+## Features
+
+- **Provider Agnostic:** Supports multiple LLM providers, including OpenAI, Anthropic, Google, Mistral, Cohere, Hugging Face, and Ollama.
+- **Easy Configuration:** Uses a simple configuration management system to handle API keys and provider settings.
+- **Basic and Advanced Features:** Supports both basic chat and text completion, as well as advanced features like streaming.
+- **Local and Remote Models:** Works with both local models (e.g., Ollama) and remote API providers.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.7+
+- API keys for the providers you wish to use (e.g., OpenAI, Anthropic, Google).
+- [Ollama](https://ollama.ai) (for local model usage).
+
+### Installation
+
+Clone the repository and install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Configuration
+
+1.  **API Keys:**
+    - Set environment variables for each provider's API key. For example:
+      ```bash
+      export OPENAI_API_KEY='your-openai-key'
+      export ANTHROPIC_API_KEY='your-anthropic-key'
+      export GOOGLE_API_KEY='your-google-key'
+      ```
+    - Alternatively, create a `.env` file in the project root with your API keys:
+      ```
+      OPENAI_API_KEY=your-openai-key
+      ANTHROPIC_API_KEY=your-anthropic-key
+      GOOGLE_API_KEY=your-google-key
+      ```
+    - The `.env` file is gitignored to prevent accidental commits of your keys.
+
+2.  **Ollama (Local Model):**
+    - Install Ollama from [https://ollama.ai](https://ollama.ai).
+    - Run your desired model:
+      ```bash
+      ollama run llama2
+      ```
+
+## Basic Usage
+
+Here's how to use Chalice Forged with a local Ollama model:
+
+```python
+from chalice_forged import create_client
+
+# Create client with any provider
+client = create_client("ollama", base_url="http://localhost:11434", model="qwen3", api_key="your-key")
+response = client.chat([{"role": "user", "content": "Hello!"}])
+
+for chunk in client.stream_chat([{"role": "user", "content": "Hello!"}]):
+    print(chunk["content"], end="", flush=True)
+print()
+```
+
+## Advanced Features
+
+```python
+from chalice_forged import create_client
+
+client = create_client("ollama", model="llama2")
+
+# Text completion
+text_response = client.complete("The future of AI is")
+print(f"Text completion: {text_response['content'][:50]}...")
+
+# Chat completion
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What is Python?"}
+]
+chat_response = client.chat(messages)
+print(f"Chat completion: {chat_response['content'][:50]}...")
+
+# Streaming
+print("Streaming response: ", end="")
+for chunk in client.stream_chat(messages):
+    if chunk.get("success") and chunk.get("content"):
+        print(chunk["content"], end="", flush=True)
+        break  # Just show first chunk for demo
+print("\n(streaming truncated for demo)")
+```
+
+## Available Providers
+
+<details>
+  <summary>Supported Providers</summary>
+
+- Anthropic
+- Cohere
+- Google
+- Hugging Face
+- Mistral
+- Ollama
+- OpenAI
+</details>
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1.  Fork the repository.
+2.  Create a new branch for your feature or bug fix.
+3.  Make your changes and commit them with descriptive commit messages.
+4.  Submit a pull request.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
